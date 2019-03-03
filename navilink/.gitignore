@@ -1,0 +1,6 @@
+main
+go-navilink
+.ninja_log
+.vscode/
+clib/
+navilink

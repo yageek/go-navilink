@@ -75,11 +75,13 @@ func (d *Device) GetAllWaypoints() ([]Waypoint, error) {
 	points := make([]Waypoint, d.Infos.TotalWaypoint)
 
 	downloadPassCount := int(d.Infos.TotalWaypoint) / MaxWaypointQueryLength
+	rest := int(d.Infos.TotalWaypoint) % MaxWaypointQueryLength
+	downloadPassCount += rest
 
 	// On télécharge tous les points en C
 	for i := 0; i < downloadPassCount; i++ {
 
-		cursorIndex := i * MaxWaypointQueryLength
+		cursorIndex := 0
 		res := C.navilink_query_waypoint(&d.navilinkC, C.int(cursorIndex), MaxWaypointQueryLength, &tmpPoints[cursorIndex])
 		if res < 0 {
 			return []Waypoint{}, fmt.Errorf("Error retrieving %d waypoints from %d. Aborting", MaxWaypointQueryLength, cursorIndex)

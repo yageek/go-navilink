@@ -55,7 +55,7 @@ type Device struct {
 func Open(path string) (*Device, error) {
 	device := &Device{}
 	res := C.navilink_open_device_from_name(C.CString(path), &device.navilinkC)
-	if res != C.NavilinkOK {
+	if res < 0 {
 		return nil, device.navilinkErrorToGoError()
 	}
 	device.Infos = deviceInfosFromCInfos(device.navilinkC.informations)
@@ -82,9 +82,17 @@ func (d *Device) GetAllWaypoints() ([]Waypoint, error) {
 	for i := 0; i < downloadPassCount; i++ {
 
 		cursorIndex := 0
-		res := C.navilink_query_waypoint(&d.navilinkC, C.int(cursorIndex), MaxWaypointQueryLength, &tmpPoints[cursorIndex])
+
+		var length int
+		if rest > 0 && i == downloadPassCount-1 {
+			length = rest
+		} else {
+			length = MaxWaypointQueryLength
+		}
+
+		res := C.navilink_query_waypoint(&d.navilinkC, C.int(cursorIndex), C.int(length), &tmpPoints[cursorIndex])
 		if res < 0 {
-			return []Waypoint{}, fmt.Errorf("Error retrieving %d waypoints from %d. Aborting", MaxWaypointQueryLength, cursorIndex)
+			return []Waypoint{}, fmt.Errorf("Error retrieving %d waypoints from %d. Aborting", length, cursorIndex)
 		}
 
 		for c := cursorIndex; c < cursorIndex+int(res); c++ {
@@ -98,6 +106,8 @@ func (d *Device) GetAllWaypoints() ([]Waypoint, error) {
 			alt := float64(tmpPoints[c].position.altitude) * 0.3048
 			points[c].Position = Position{Lat: lat, Lng: lng, Altitude: alt}
 		}
+
+		cursorIndex += int(res)
 	}
 
 	return points, nil
